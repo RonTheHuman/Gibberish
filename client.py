@@ -11,10 +11,13 @@ def recv(socket, buffer=4069):
     return data
 
 
+def add_len_bytes(data):
+    return len(data).to_bytes(4, "big") + data
+
+
 def send_request(socket, req_id, data):
     data = req_id.to_bytes(1, "big") + data
-    data = len(data).to_bytes(4, "big") + data
-    socket.send(data)
+    socket.send(add_len_bytes(data))
     print("Sent to db")
     return recv(sock)
 
@@ -25,8 +28,9 @@ print("Connected to server")
 
 open = True
 while open:
-    print("Enter action:\n 0 for adding to db\n 1 for retrieving from db\n e to exit")
     send_req = True
+
+    print("Enter action:\n 0 for adding to db\n 1 for retrieving from db\n e to exit")
     action = input()
     if action == "0":
         print("Enter text to add to db")
@@ -37,14 +41,16 @@ while open:
         print("Enter end index of send_data points")
         e = input()
         send_data = f"{s},{e}".encode()
+
     elif action == "e":
         sock.close()
         open = False
         send_req = False
+
     else:
         print("invalid action")
         send_req = False
 
     if send_req:
-        print(send_request(sock, int(action), send_data))
+        print(send_request(sock, int(action), send_data).decode())
 
