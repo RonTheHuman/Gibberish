@@ -13,7 +13,28 @@ def reply(req_id, data):
         return su.add_len_bytes(send_data)
 
 
-dbase = ["text", "ornery", "werewolf", "porch", "qwerty", "apple"]
+forum = {"id": None,
+         "name": None,
+         "description": None,
+         "kwrds": None,
+         "users": None,
+         "posts": None}
+
+post = {"user": None,
+        "title": None,
+        "text": None,
+        "img_path": None,
+        "comments": None}
+
+comment = {"user": None,
+           "text": None,
+           "img_path": None}
+
+user = {"name": None,
+        "hashed_pass": None,
+        "forums": None}
+
+dbase = list()
 dbase.sort()
 
 su.server(12345, reply)
