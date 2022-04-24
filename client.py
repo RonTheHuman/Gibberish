@@ -1,40 +1,50 @@
 import socket as s
 
 
+def recv(socket, buffer=4069):
+    data = socket.recv(buffer)
+    len_bytes = int.from_bytes(data[:4], "big")
+    data = data[4:]
+    while len(data) < len_bytes:
+        data += socket.recv(buffer)
+        print("Data is longer than buffer")
+    return data
+
+
+def send_request(socket, req_id, data):
+    data = req_id.to_bytes(1, "big") + data
+    data = len(data).to_bytes(4, "big") + data
+    socket.send(data)
+    print("Sent to db")
+    return recv(sock)
+
+
 sock = s.socket(s.AF_INET, s.SOCK_STREAM)
 sock.connect(("192.168.68.137", 12345))
-buffer = 4096
 print("Connected to server")
 
-while 1:
-    print("Enter request type:\n 0 for adding to db\n 1 for retrieving from db\ne to exit")
-    request = input()
-    if request == "0":
+open = True
+while open:
+    print("Enter action:\n 0 for adding to db\n 1 for retrieving from db\n e to exit")
+    send_req = True
+    action = input()
+    if action == "0":
         print("Enter text to add to db")
-        send_data = b"\x00" + input().encode()
-        send_data = len(send_data).to_bytes(4, "big") + send_data
-
-        sock.send(send_data)
-        print("Sent to db")
-        sock.recv(8)
-        print("Added to db")
-    if request == "1":
+        send_data = input().encode()
+    elif action == "1":
         print("Enter start index of send_data points")
         s = input()
         print("Enter end index of send_data points")
         e = input()
-
-        send_data = f"{s},{e}"
-        send_data = b"\x01" + str(send_data).encode()
-        send_data = len(send_data).to_bytes(4, "big") + send_data
-        sock.send(send_data)
-
-        recv_data = sock.recv(buffer)
-        len_bytes = int.from_bytes(recv_data[:4], "big")
-        recv_data = recv_data[4:]
-        while len(recv_data) < len_bytes:
-            recv_data += sock.recv(buffer)
-            print("data is longer than buffer")
-        print(recv_data.decode())
-    if request == "e":
+        send_data = f"{s},{e}".encode()
+    elif action == "e":
         sock.close()
+        open = False
+        send_req = False
+    else:
+        print("invalid action")
+        send_req = False
+
+    if send_req:
+        print(send_request(sock, int(action), send_data))
+

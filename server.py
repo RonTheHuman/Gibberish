@@ -51,8 +51,9 @@ while True:
                 if request == 0:
                     dbase.append(data.decode())
                     dbase.sort()
-
-                    msg_queues[s].append("ack".encode())
+                    send_data = "ack".encode()
+                    send_data = len(send_data).to_bytes(4, "big") + send_data
+                    msg_queues[s].append(send_data)
                 if request == 1:
                     start, end = data.decode().split(",")
                     send_data = reduce(lambda x, y: f"{x}, {y}", dbase[int(start):int(end)]).encode()
