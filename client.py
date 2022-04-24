@@ -7,6 +7,7 @@ while running:
     print("\nEnter action:\n 0 for adding to db\n 1 for retrieving from db\n e to exit")
     action = input()
     send_req = True
+
     if action == "0":
         print("Enter text to add to db")
         send_data = input().encode()
@@ -16,6 +17,7 @@ while running:
         print("Enter end index of send_data points")
         e = input()
         send_data = f"{s},{e}".encode()
+
     elif action == "e":
         sock.close()
         running = False
