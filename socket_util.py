@@ -66,7 +66,7 @@ def server(port, reply):
                     print(f"Got data: {recv_data}\n")
                     req_id = recv_data[0]
                     recv_data = recv_data[1:]
-                    msg_queues[s].append(add_len_bytes(reply(req_id, recv_data)))
+                    msg_queues[s].append(add_len_bytes(reply(req_id, recv_data, s.getsockname()[0])))
                 else:
                     print(f"Disconnected {s.getsockname()}\n")
                     if s in outputs:
