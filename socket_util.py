@@ -1,6 +1,7 @@
 import socket
 from select import select
 from datetime import datetime
+import json
 import builtins
 
 
@@ -19,14 +20,15 @@ def recv(sock, buffer=4069):
 
 
 def send_request(sock, req_id, data):
+    data = json.dumps(data).encode()
     data = req_id.to_bytes(1, "big") + data
     sock.send(add_len_bytes(data))
-    print("Sent to db")
-    return recv(sock)
+    return json.loads(recv(sock).decode())
 
 
 def client(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print("Waiting for connect")
     sock.connect((ip, port))
     print("Connected to server")
     return sock
@@ -42,7 +44,7 @@ def server(port, reply):
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind(addr)
     server_sock.listen(5)
-    print("Server running\n")
+    print(f"Server running: {addr}\n")
 
     inputs = [server_sock]
     outputs = []
@@ -64,7 +66,7 @@ def server(port, reply):
                     print(f"Got data: {recv_data}\n")
                     req_id = recv_data[0]
                     recv_data = recv_data[1:]
-                    msg_queues[s].append(reply(req_id, recv_data))
+                    msg_queues[s].append(add_len_bytes(reply(req_id, recv_data, s.getsockname()[0])))
                 else:
                     print(f"Disconnected {s.getsockname()}\n")
                     if s in outputs:
