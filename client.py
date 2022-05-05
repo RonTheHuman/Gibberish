@@ -6,42 +6,33 @@ from os import system
 sock = su.client("192.168.68.137", 12345)
 vals_to_req = 2
 state = "start"
+srch_req_id = None
 while True:
     print("\nEnter action")
     if state == "start":
         print("b: go back (exit)\na: add forum\n"
-              "s[]: search forum\n\tsl: by latest")
+              "s[]: pick search type\n\tsl: by latest\n"
+              "m: show more forums\ne: enter forum")
         action = input()
         if action == "b":
             sock.close()
             break
         if action == "sl":
             vals_requested = 0
-            last_srch_req_id = 0
-            state = "search"
-            forums = su.send_request(sock, 0, (vals_requested, vals_to_req))
-            vals_requested += len(forums)
-            print("Forums: ")
-            for forum_id, name, desc in forums:
-                print(f"id: {forum_id}| Name: {name}, description: {desc}")
+            srch_req_id = 0
+            print("Search type set as 'latest'")
         elif action == "a":
             print("Enter forum name:")
             name = input()
             print("Enter forum description:")
             desc = input()
             print(su.send_request(sock, 1, (name, desc)))
-        else:
-            print("Invalid action")
-            send_req = False
-
-    elif state == "search":
-        print("b: go back\nm: show more forums\ne: enter forum")
-        action = input()
-        if action == "b":
-            state = "start"
-            continue
-        if action == "m":
-            forums = su.send_request(sock, last_srch_req_id, (vals_requested, vals_to_req))
+            vals_requested = 0
+        elif action == "m":
+            if srch_req_id is None:
+                print("Choose a search type first")
+                continue
+            forums = su.send_request(sock, srch_req_id, (vals_requested, vals_to_req))
             if len(forums) == 0:
                 print("No more forums")
                 continue
@@ -66,7 +57,9 @@ while True:
             print(f"id: {post_id}| Title: {title}, posted by: {user}")
         action = input()
         if action == "b":
-            state = "search"
+            state = "start"
+            srch_req_id = None
+            vals_requested = 0
             continue
         if action == "m":
             posts = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
@@ -82,6 +75,7 @@ while True:
             print("Enter post content:")
             content = input()
             print(su.send_request(sock, 3, (forum_id, title, content)))
+            vals_requested = 0
         elif action == "e":
             print("Enter post id")
             post_id = int(input())
@@ -100,6 +94,7 @@ while True:
         action = input()
         if action == "b":
             state = "forum"
+            vals_requested = 0
             continue
         if action == "m":
             comments = su.send_request(sock, 5, (forum_id, post_id, vals_requested, vals_to_req))
@@ -113,3 +108,4 @@ while True:
             print("Enter comment text:")
             text = input()
             print(su.send_request(sock, 6, (forum_id, post_id, text)))
+            vals_requested = 0
