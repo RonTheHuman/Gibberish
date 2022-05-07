@@ -1,4 +1,3 @@
-import json
 import pymongo
 
 
@@ -25,8 +24,8 @@ comment_template = \
      "img_path": None}
 
 user_template = \
-    {"name": None,
-     "hashed_pass": None,
+    {"uname": None,
+     "password": None,
      "forums": None}
 
 
@@ -43,15 +42,12 @@ def add_forum(forum):
     forum_db.insert_one(forum)
 
 
-def get_forum_data(data, slice=None):
+def get_forum_data(data, slc):
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
         data_dict["_id"] = 0
-    if slice is not None:
-        forum_data = list(forum_db.find({"next_forum_id": {"$exists": False}}, data_dict))[slice[0]:slice[1]]
-        return forum_data
-    else:
-        raise Exception("Invalid forum data request")
+    forum_data = list(forum_db.find({"next_forum_id": {"$exists": False}}, data_dict))[slc[0]:slc[1]]
+    return forum_data
 
 
 def post(title, text, user):
@@ -68,13 +64,13 @@ def add_post(post, forum_id):
     forum_db.update_one({"_id": forum_id}, {"$inc": {"next_post_id": 1}, "$push": {"posts": post["_id"]}})
 
 
-def get_post_data(data, forum_id=None, slice=None, post_id=None):
+def get_post_data(data, forum_id=None, slc=None, post_id=None):
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
         data_dict["_id"] = 0
-    if slice is not None:
+    if slc is not None:
         post_ids = forum_db.find_one({"_id": forum_id})["posts"]
-        return list(post_db.find({"_id": {"$in": post_ids}}, data_dict))[slice[0]:slice[1]]
+        return list(post_db.find({"_id": {"$in": post_ids}}, data_dict))[slc[0]:slc[1]]
     elif post_id is not None:
         return post_db.find_one({"_id": post_id}, data_dict)
     else:
@@ -93,15 +89,30 @@ def add_comment(comment, post_id):
     post_db.update_one({"_id": post_id}, {"$push": {"comments": insert_res.inserted_id}})
 
 
-def get_comment_data(data, post_id, slice=None):
+def get_comment_data(data, post_id, slc):
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
         data_dict["_id"] = 0
-    if slice is not None:
-        comment_ids = post_db.find_one({"_id": post_id})["comments"]
-        return list(cmnt_db.find({"_id": {"$in": comment_ids}}, data_dict))[slice[0]:slice[1]]
-    else:
-        raise Exception("Invalid get_type of post data request from databse")
+    comment_ids = post_db.find_one({"_id": post_id})["comments"]
+    return list(cmnt_db.find({"_id": {"$in": comment_ids}}, data_dict))[slc[0]:slc[1]]
+
+
+def user(uname, pswrd):
+    user = user_template.copy()
+    user["uname"] = uname
+    user["password"] = pswrd
+    return user
+
+
+def user_exists(uname, pswrd=None):
+    srch = {"uname": uname}
+    if pswrd:
+        srch["password"] = pswrd
+    return bool(user_db.find_one(srch))
+
+
+def add_user(user):
+    user_db.insert_one(user)
 
 
 client = pymongo.MongoClient("mongodb+srv://RonTheHuman:mongomyak2022@cluster0.6rgbh"
@@ -110,6 +121,7 @@ dbase = client["Gibberish"]
 forum_db = dbase["forums"]
 post_db = dbase["posts"]
 cmnt_db = dbase["comments"]
-if len(list(forum_db.find({}).limit(1))) == 0:
+user_db = dbase["users"]
+if not forum_db.find_one({}):
     print("creating new dbase")
     forum_db.insert_one({"next_forum_id": 0})

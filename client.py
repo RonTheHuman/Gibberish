@@ -1,21 +1,58 @@
 import socket_util as su
-import json
-from os import system
+from hashlib import sha256
+import random
+
 
 sock = su.client("192.168.68.137", 12345)
 vals_to_req = 10
-state = "search"
+state = "sign_in"
 srch_req_id = None
 while True:
     print("\nEnter action")
-    if state == "search":
+    if state == "sign_in":
+        print("Sign In: i\nSign up: u\nJoin Anonymously (with ip): a\nb: go back (exit)")
+        action = input()
+        if action == "b":
+            sock.close()
+            break
+        elif action == "i":
+            print("Enter user name")
+            uname = input()
+            print("Enter password")
+            pswrd = input().encode()
+            pswrd = sha256(pswrd).hexdigest()
+            correct = su.send_request(sock, 7, (uname, pswrd))
+            if correct:
+                print("Signed in Successfully")
+                state = "browse"
+            else:
+                print("Incorrect user name or password")
+        elif action == "u":
+            print("Enter user name")
+            unique = False
+            while not unique:
+                uname = input()
+                unique = su.send_request(sock, 8, uname)
+                if not unique:
+                    print(f"User name already exists, try another one.\n"
+                          f"suggestion: {uname}{random.randint(10000, 100000)}")
+            print("Enter password")
+            pswrd = input().encode()
+            pswrd = sha256(pswrd).hexdigest()
+            su.send_request(sock, 9, (uname, pswrd))
+            print("Signed up Successfully")
+            state = "browse"
+        elif action == "a":
+            uname = sock.getsockname()[0]
+            print("Joined successfully")
+
+    elif state == "browse":
         print("b: go back (exit)\na: add forum\n"
               "s[]: pick search type\n\tsl: by latest\n"
               "m: show more forums\ne: enter forum")
         action = input()
         if action == "b":
-            sock.close()
-            break
+            state = "sign_in"
         if action == "sl":  # set search
             vals_requested = 0
             srch_req_id = 0
@@ -25,7 +62,8 @@ while True:
             name = input()
             print("Enter forum description:")
             desc = input()
-            print(su.send_request(sock, 1, (name, desc)))
+            su.send_request(sock, 1, (name, desc))
+            print("Added to database")
             vals_requested = 0
         elif action == "m":  # show forums
             if srch_req_id is None:
@@ -56,7 +94,7 @@ while True:
             print(f"id: {post['_id']}| Title: {post['title']}, posted by: {post['user']}")
         action = input()
         if action == "b":
-            state = "search"
+            state = "browse"
             srch_req_id = None
             vals_requested = 0
             continue
@@ -73,7 +111,8 @@ while True:
             title = input()
             print("Enter post content:")
             content = input()
-            print(su.send_request(sock, 3, (forum_id, title, content)))
+            su.send_request(sock, 3, (forum_id, title, content, uname))
+            print("Added to database")
             vals_requested = 0
         elif action == "e":  # enter post
             print("Enter post id")
@@ -106,5 +145,6 @@ while True:
         elif action == "a":  # add comment
             print("Enter comment text:")
             text = input()
-            print(su.send_request(sock, 6, (post_id, text)))
+            su.send_request(sock, 6, (post_id, text, uname))
+            print("Added to database")
             vals_requested = 0

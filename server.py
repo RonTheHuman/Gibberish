@@ -5,36 +5,43 @@ import json
 
 def reply(req_id, data, ip):
     data = json.loads(data.decode())
+    to_send = ""
     if req_id == 0:  # Get forums
         start, amount = data
         to_send = list()
-        to_send = du.get_forum_data(("_id", "name", "description"), slice=(start, start+amount))
+        to_send = du.get_forum_data(("_id", "name", "description"), slc=(start, start+amount))
     elif req_id == 1:  # add forum
         name, desc = data
         forum = du.forum(name, desc)
         du.add_forum(forum)
-        to_send = "Added to database"
     elif req_id == 2:  # Get posts: id, title, user
         forum_id, start, amount = data
-        to_send = du.get_post_data(("_id", "title", "user"), forum_id=forum_id, slice=(start, start+amount))
+        to_send = du.get_post_data(("_id", "title", "user"), forum_id=forum_id, slc=(start, start+amount))
     elif req_id == 3:  # add post
-        forum_id, title, text = data
-        post = du.post(title, text, ip)
+        forum_id, title, text, uname = data
+        post = du.post(title, text, uname)
         du.add_post(post, forum_id)
-        to_send = "Added to database"
     elif req_id == 4:  # get post text
         post_id = data
         to_send = du.get_post_data(("text", ), post_id=post_id)
     elif req_id == 5:  # get comments
         post_id, start, amount = data
-        to_send = du.get_comment_data(("text", "user"), post_id, (start, start+amount))
+        to_send = du.get_comment_data(("text", "user"), post_id, slc=(start, start+amount))
     elif req_id == 6:  # add comment
-        post_id, text = data
-        comment = du.comment(text, ip)
+        post_id, text, uname = data
+        comment = du.comment(text, uname)
         du.add_comment(comment, post_id)
-        to_send = "Added to database"
+    elif req_id == 7:
+        uname, pswrd = data
+        to_send = du.user_exists(uname, pswrd)
+    elif req_id == 8:
+        uname = data
+        to_send = not du.user_exists(uname)
+    elif req_id == 9:
+        uname, pswrd = data
+        du.add_user(du.user(uname, pswrd))
     else:
-        to_send = "Invalid request error"
+        raise Exception("Invalid server request error")
     return json.dumps(to_send).encode()
 
 
