@@ -5,7 +5,7 @@ import json
 import builtins
 
 
-def add_len_bytes(data):
+def add_len_bytes(data: bytes):
     return len(data).to_bytes(4, "big") + data
 
 

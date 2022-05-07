@@ -1,17 +1,18 @@
 import json
+import pymongo
 
 
 forum_template = \
-    {"id": None,
+    {"_id": None,
      "name": None,
      "description": None,
      "kwrds": None,
      "users": None,
      "posts": list(),
-     "last_post_id": 0}
+     "next_post_id": 0}
 
 post_template = \
-    {"id": None,
+    {"_id": None,
      "user": None,
      "title": None,
      "text": None,
@@ -29,11 +30,6 @@ user_template = \
      "forums": None}
 
 
-def save_dbase():
-    with open("dbase.txt", mode="w") as dbase_f:
-        dbase_f.write(json.dumps(dbase))
-
-
 def forum(name, desc):
     forum = forum_template.copy()
     forum["name"] = name
@@ -42,36 +38,20 @@ def forum(name, desc):
 
 
 def add_forum(forum):
-    dbase["forums"].append(forum)
-    forum["id"] = dbase["last_forum_id"]
-    dbase["last_forum_id"] += 1
+    forum["_id"] = forum_db.find_one_and_update({"next_forum_id": {"$exists": True}},
+                                                {"$inc": {"next_forum_id": 1}})["next_forum_id"]
+    forum_db.insert_one(forum)
 
 
-def find_forum(forum_id):
-    for forum in dbase["forums"]:
-        if forum["id"] == forum_id:
-            break
-    return forum
-
-
-def get_forum_data(data, slice=None, forum_id=None):
+def get_forum_data(data, slice=None):
+    data_dict = {x: 1 for x in data}
+    if "_id" not in data:
+        data_dict["_id"] = 0
     if slice is not None:
-        all_data = list()
-        forums = dbase["forums"][slice[0]:slice[1]]
-        for forum in forums:
-            forum_data = list()
-            for d in data:
-                forum_data.append(forum[d])
-            all_data.append(forum_data)
-        return all_data
-    elif forum_id is not None:
-        forum = find_forum(forum_id)
-        forum_data = list()
-        for d in data:
-            forum_data.append(forum[d])
+        forum_data = list(forum_db.find({"next_forum_id": {"$exists": False}}, data_dict))[slice[0]:slice[1]]
         return forum_data
     else:
-        raise Exception("Invalid get_type of form data request from databse")
+        raise Exception("Invalid forum data request")
 
 
 def post(title, text, user):
@@ -83,38 +63,22 @@ def post(title, text, user):
 
 
 def add_post(post, forum_id):
-    forum = find_forum(forum_id)
-    post["id"] = forum["last_post_id"]
-    forum["last_post_id"] += 1
-    forum["posts"].append(post)
+    post["_id"] = forum_db.find_one({"_id": forum_id})["next_post_id"]
+    post_db.insert_one(post)
+    forum_db.update_one({"_id": forum_id}, {"$inc": {"next_post_id": 1}, "$push": {"posts": post["_id"]}})
 
 
-def find_post(forum, post_id):
-    for post in forum["posts"]:
-        if post["id"] == post_id:
-            break
-    return post
-
-
-def get_post_data(data, forum_id, slice=None, post_id=None):
-    forum = find_forum(forum_id)
+def get_post_data(data, forum_id=None, slice=None, post_id=None):
+    data_dict = {x: 1 for x in data}
+    if "_id" not in data:
+        data_dict["_id"] = 0
     if slice is not None:
-        all_data = list()
-        posts = forum["posts"][slice[0]:slice[1]]
-        for post in posts:
-            post_data = list()
-            for d in data:
-                post_data.append(post[d])
-            all_data.append(post_data)
-        return all_data
+        post_ids = forum_db.find_one({"_id": forum_id})["posts"]
+        return list(post_db.find({"_id": {"$in": post_ids}}, data_dict))[slice[0]:slice[1]]
     elif post_id is not None:
-        post = find_post(forum, post_id)
-        post_data = list()
-        for d in data:
-            post_data.append(post[d])
-        return post_data
+        return post_db.find_one({"_id": post_id}, data_dict)
     else:
-        raise Exception("Invalid get_type of post data request from databse")
+        raise Exception("Invalid post data request")
 
 
 def comment(text, user):
@@ -124,27 +88,28 @@ def comment(text, user):
     return comment
 
 
-def add_comment(forum_id, post_id, comment):
-    post = find_post(find_forum(forum_id), post_id)
-    post["comments"].append(comment)
+def add_comment(comment, post_id):
+    insert_res = cmnt_db.insert_one(comment)
+    post_db.update_one({"_id": post_id}, {"$push": {"comments": insert_res.inserted_id}})
 
 
-def get_comment_data(data, forum_id, post_id, slice=None):
-    post = find_post(find_forum(forum_id), post_id)
+def get_comment_data(data, post_id, slice=None):
+    data_dict = {x: 1 for x in data}
+    if "_id" not in data:
+        data_dict["_id"] = 0
     if slice is not None:
-        all_data = list()
-        comments = post["comments"][slice[0]:slice[1]]
-        for comment in comments:
-            comment_data = list()
-            for d in data:
-                comment_data.append(comment[d])
-            all_data.append(comment_data)
-        return all_data
+        comment_ids = post_db.find_one({"_id": post_id})["comments"]
+        return list(cmnt_db.find({"_id": {"$in": comment_ids}}, data_dict))[slice[0]:slice[1]]
     else:
         raise Exception("Invalid get_type of post data request from databse")
 
 
-with open("dbase.txt") as f:
-    dbase = json.loads(f.read())
-if dbase is None:
-    dbase = {"last_forum_id": 0, "forums": list()}
+client = pymongo.MongoClient("mongodb+srv://RonTheHuman:mongomyak2022@cluster0.6rgbh"
+                             ".mongodb.net/Gibberish?retryWrites=true&w=majority")
+dbase = client["Gibberish"]
+forum_db = dbase["forums"]
+post_db = dbase["posts"]
+cmnt_db = dbase["comments"]
+if len(list(forum_db.find({}).limit(1))) == 0:
+    print("creating new dbase")
+    forum_db.insert_one({"next_forum_id": 0})
