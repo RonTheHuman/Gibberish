@@ -31,15 +31,20 @@ def reply(req_id, data, ip):
         post_id, text, uname = data
         comment = du.comment(text, uname)
         du.add_comment(comment, post_id)
-    elif req_id == 7:
+    elif req_id == 7:  # check if sign in is vaild
         uname, pswrd = data
         to_send = du.user_exists(uname, pswrd)
-    elif req_id == 8:
+    elif req_id == 8:  # check if user name is unique
         uname = data
         to_send = not du.user_exists(uname)
     elif req_id == 9:
-        uname, pswrd = data
+        uname, pswrd = data  # add user
         du.add_user(du.user(uname, pswrd))
+    elif req_id == 10:
+        to_send = du.get_forum_data(("_id", "name", "description"))
+    elif req_id == 11:
+        start, amount, search_text = data
+        to_send = du.get_forum_data(("_id", "name", "description"), slc=(start, start+amount), text_sort=search_text)
     else:
         raise Exception("Invalid server request error")
     return json.dumps(to_send).encode()

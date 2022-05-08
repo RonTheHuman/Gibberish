@@ -44,19 +44,27 @@ while True:
             state = "browse"
         elif action == "a":
             uname = sock.getsockname()[0]
+            state = "browse"
             print("Joined successfully")
 
     elif state == "browse":
         print("b: go back (exit)\na: add forum\n"
-              "s[]: pick search type\n\tsl: by latest\n"
+              "s[]: pick search type\n\tsl: by latest\n\tsn: search by name"
               "m: show more forums\ne: enter forum")
         action = input()
         if action == "b":
             state = "sign_in"
+            continue
         if action == "sl":  # set search
             vals_requested = 0
             srch_req_id = 0
             print("Search type set as 'latest'")
+        elif action == "sn":
+            vals_requested = 0
+            srch_req_id = 11
+            print("Enter name: ")
+            search_name = input()
+            print("Search type set as 'name'")
         elif action == "a":  # add forum
             print("Enter forum name:")
             name = input()
@@ -69,13 +77,16 @@ while True:
             if srch_req_id is None:
                 print("Choose a search type first")
                 continue
-            forums = su.send_request(sock, srch_req_id, (vals_requested, vals_to_req))
-            if len(forums) == 0:
+            data = [vals_requested, vals_to_req]
+            if srch_req_id == 11:
+                data.append(search_name)
+            forum_data_arr = su.send_request(sock, srch_req_id, data)
+            if len(forum_data_arr) == 0:
                 print("No more forums")
                 continue
-            vals_requested += len(forums)
-            for forum in forums:
-                print(f"id: {forum['_id']}| Name: {forum['name']}, description: {forum['description']}")
+            vals_requested += len(forum_data_arr)
+            for forum_data in forum_data_arr:
+                print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}")
         elif action == "e":  # enter forum
             print("Enter forum id")
             forum_id = int(input())
@@ -87,11 +98,11 @@ while True:
 
     elif state == "forum":
         print("b: go back\nm: show more posts\na: add post\ne: enter post")
-        posts = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
-        vals_requested += len(posts)
+        post_data_arr = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
+        vals_requested += len(post_data_arr)
         print("Posts in forum")  # show initial posts
-        for post in posts:
-            print(f"id: {post['_id']}| Title: {post['title']}, posted by: {post['user']}")
+        for post_data in post_data_arr:
+            print(f"id: {post_data['_id']}| Title: {post_data['title']}, posted by: {post_data['user']}")
         action = input()
         if action == "b":
             state = "browse"
@@ -99,13 +110,13 @@ while True:
             vals_requested = 0
             continue
         if action == "m":  # show posts
-            posts = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
-            if len(posts) == 0:
+            post_data_arr = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
+            if len(post_data_arr) == 0:
                 print("No more posts")
                 continue
-            vals_requested += len(posts)
-            for post in posts:
-                print(f"id: {post['_id']}| Title: {post['title']}, posted by: {post['user']}")
+            vals_requested += len(post_data_arr)
+            for post_data in post_data_arr:
+                print(f"id: {post_data['_id']}| Title: {post_data['title']}, posted by: {post_data['user']}")
         elif action == "a":  # add post
             print("Enter post title:")
             title = input()
@@ -123,25 +134,25 @@ while True:
     elif state == "post":
         print("b: go back\nm: show more comments\na: add comment")
         post = su.send_request(sock, 4, post_id)
-        comments = su.send_request(sock, 5, (post_id, vals_requested, vals_to_req))
-        vals_requested += len(comments)
+        comment_data_arr = su.send_request(sock, 5, (post_id, vals_requested, vals_to_req))
+        vals_requested += len(comment_data_arr)
         print(f"Post content:\n{post['text']}")
         print("Comments on post")  # show initial comments
-        for comment in comments:
-            print(f"{comment['text']}, posted by: {comment['user']}")
+        for comment_data in comment_data_arr:
+            print(f"{comment_data['text']}, posted by: {comment_data['user']}")
         action = input()
         if action == "b":
             state = "forum"
             vals_requested = 0
             continue
         if action == "m":  # show comments
-            comments = su.send_request(sock, 5, (post_id, vals_requested, vals_to_req))
-            if len(comments) == 0:
+            comment_data_arr = su.send_request(sock, 5, (post_id, vals_requested, vals_to_req))
+            if len(comment_data_arr) == 0:
                 print("No more comments")
                 continue
-            vals_requested += len(comments)
-            for comment in comments:
-                print(f"{comment['text']}, posted by: {comment['user']}")
+            vals_requested += len(comment_data_arr)
+            for comment_data in comment_data_arr:
+                print(f"{comment_data['text']}, posted by: {comment_data['user']}")
         elif action == "a":  # add comment
             print("Enter comment text:")
             text = input()

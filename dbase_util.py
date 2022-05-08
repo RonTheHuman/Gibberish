@@ -42,12 +42,17 @@ def add_forum(forum):
     forum_db.insert_one(forum)
 
 
-def get_forum_data(data, slc):
+def get_forum_data(data, slc=None, text_sort=None, kwrd_sort=None):
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
         data_dict["_id"] = 0
-    forum_data = list(forum_db.find({"next_forum_id": {"$exists": False}}, data_dict))[slc[0]:slc[1]]
-    return forum_data
+    find_dict = {"next_forum_id": {"$exists": False}}
+    if text_sort:
+        find_dict["name"] = {"$regex": text_sort, "$options": "i"}
+    forum_data = list(forum_db.find(find_dict, data_dict))
+    if not slc:
+        return forum_data
+    return forum_data[slc[0]:slc[1]]
 
 
 def post(title, text, user):
