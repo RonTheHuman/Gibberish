@@ -49,7 +49,7 @@ while True:
 
     elif state == "browse":
         print("b: go back (exit)\na: add forum\n"
-              "s[]: pick search type\n\tsl: by latest\n\tsn: search by name"
+              "s[]: pick search type\n\tsl: by latest\n\tsn: search by name\n\tsk: search by keywords\n"
               "m: show more forums\ne: enter forum")
         action = input()
         if action == "b":
@@ -64,7 +64,13 @@ while True:
             srch_req_id = 11
             print("Enter name: ")
             search_name = input()
-            print("Search type set as 'name'")
+            print(f"Searching by name {search_name}")
+        elif action == "sk":
+            vals_requested = 0
+            srch_req_id = 12
+            print("Enter keyword: ")
+            search_kwrd = input()
+            print(f"Searching by keyword {search_kwrd}")
         elif action == "a":  # add forum
             print("Enter forum name:")
             name = input()
@@ -80,6 +86,8 @@ while True:
             data = [vals_requested, vals_to_req]
             if srch_req_id == 11:
                 data.append(search_name)
+            elif srch_req_id == 12:
+                data.append(search_kwrd)
             forum_data_arr = su.send_request(sock, srch_req_id, data)
             if len(forum_data_arr) == 0:
                 print("No more forums")

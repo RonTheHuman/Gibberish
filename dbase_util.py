@@ -1,11 +1,12 @@
 import pymongo
+import RAKE as rake
 
 
 forum_template = \
     {"_id": None,
      "name": None,
      "description": None,
-     "kwrds": None,
+     "kwrds": list(),
      "users": None,
      "posts": list(),
      "next_post_id": 0}
@@ -33,6 +34,11 @@ def forum(name, desc):
     forum = forum_template.copy()
     forum["name"] = name
     forum["description"] = desc
+    forum["kwrds"].extend([kwrd[0] for kwrd in rake_obj.run(name)])
+    desc_kwrds = rake_obj.run(desc)
+    for kwrd in desc_kwrds:
+        if kwrd[0] not in forum["kwrds"]:
+            forum["kwrds"].append(kwrd[0])
     return forum
 
 
@@ -49,10 +55,19 @@ def get_forum_data(data, slc=None, text_sort=None, kwrd_sort=None):
     find_dict = {"next_forum_id": {"$exists": False}}
     if text_sort:
         find_dict["name"] = {"$regex": text_sort, "$options": "i"}
-    forum_data = list(forum_db.find(find_dict, data_dict))
-    if not slc:
-        return forum_data
-    return forum_data[slc[0]:slc[1]]
+    elif kwrd_sort:
+        find_dict["$text"] = {"$search": kwrd_sort}
+    forum_data = forum_db.find(find_dict, data_dict)
+    if kwrd_sort:
+        forum_data.sort([("score", {"$meta": "textScore"})])
+    elif not text_sort:
+        forum_data.sort([("_id", pymongo.DESCENDING)])
+    forum_data = list(forum_data)
+    if text_sort:
+        forum_data.sort(key=lambda x: len(x["name"]))
+    if slc:
+        return forum_data[slc[0]:slc[1]]
+    return forum_data
 
 
 def post(title, text, user):
@@ -130,3 +145,4 @@ user_db = dbase["users"]
 if not forum_db.find_one({}):
     print("creating new dbase")
     forum_db.insert_one({"next_forum_id": 0})
+rake_obj = rake.Rake(rake.SmartStopList())

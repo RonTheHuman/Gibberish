@@ -40,11 +40,14 @@ def reply(req_id, data, ip):
     elif req_id == 9:
         uname, pswrd = data  # add user
         du.add_user(du.user(uname, pswrd))
-    elif req_id == 10:
+    elif req_id == 10:  # get all forums
         to_send = du.get_forum_data(("_id", "name", "description"))
-    elif req_id == 11:
+    elif req_id == 11:  # get forms sorted by text
         start, amount, search_text = data
         to_send = du.get_forum_data(("_id", "name", "description"), slc=(start, start+amount), text_sort=search_text)
+    elif req_id == 12:  # get forms sorted by keywords
+        start, amount, search_kwrd = data
+        to_send = du.get_forum_data(("_id", "name", "description"), slc=(start, start+amount), kwrd_sort=search_kwrd)
     else:
         raise Exception("Invalid server request error")
     return json.dumps(to_send).encode()
