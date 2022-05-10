@@ -19,7 +19,7 @@ def recv(sock, buffer=4069):
     return data
 
 
-def send_request(sock, req_id, data):
+def send_request(sock, req_id, data=""):
     data = json.dumps(data).encode()
     data = req_id.to_bytes(1, "big") + data
     sock.send(add_len_bytes(data))
@@ -36,7 +36,7 @@ def client(ip, port):
 
 def server(port, reply):
     def print(*args, **kwargs):
-        builtins.print(f"{datetime.now().strftime('%d/%m/%y, %H:%M')} | ", end="")
+        builtins.print(f"{datetime.now().strftime('%d/%m/%y, %H:%M:%S')} | ", end="")
         builtins.print(*args, **kwargs)
 
     ip = socket.gethostbyname(socket.gethostname())

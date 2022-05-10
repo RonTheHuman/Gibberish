@@ -39,7 +39,7 @@ while True:
             print("Enter password")
             pswrd = input().encode()
             pswrd = sha256(pswrd).hexdigest()
-            su.send_request(sock, 9, (uname, pswrd))
+            su.send_request(sock, 3, (uname, pswrd))
             print("Signed up Successfully")
             state = "browse"
         elif action == "a":
@@ -57,7 +57,7 @@ while True:
             continue
         if action == "sl":  # set search
             vals_requested = 0
-            srch_req_id = 0
+            srch_req_id = 10
             print("Search type set as 'latest'")
         elif action == "sn":
             vals_requested = 0
@@ -76,7 +76,7 @@ while True:
             name = input()
             print("Enter forum description:")
             desc = input()
-            su.send_request(sock, 1, (name, desc))
+            su.send_request(sock, 0, (name, desc))
             print("Added to database")
             vals_requested = 0
         elif action == "m":  # show forums
@@ -100,13 +100,10 @@ while True:
             forum_id = int(input())
             state = "forum"
             vals_requested = 0
-        else:
-            print("Invalid action")
-            send_req = False
 
     elif state == "forum":
         print("b: go back\nm: show more posts\na: add post\ne: enter post")
-        post_data_arr = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
+        post_data_arr = su.send_request(sock, 20, (forum_id, vals_requested, vals_to_req))
         vals_requested += len(post_data_arr)
         print("Posts in forum")  # show initial posts
         for post_data in post_data_arr:
@@ -118,7 +115,7 @@ while True:
             vals_requested = 0
             continue
         if action == "m":  # show posts
-            post_data_arr = su.send_request(sock, 2, (forum_id, vals_requested, vals_to_req))
+            post_data_arr = su.send_request(sock, 20, (forum_id, vals_requested, vals_to_req))
             if len(post_data_arr) == 0:
                 print("No more posts")
                 continue
@@ -130,19 +127,19 @@ while True:
             title = input()
             print("Enter post content:")
             content = input()
-            su.send_request(sock, 3, (forum_id, title, content, uname))
+            su.send_request(sock, 1, (forum_id, title, content, uname))
             print("Added to database")
             vals_requested = 0
         elif action == "e":  # enter post
             print("Enter post id")
-            post_id = int(input())
+            post_id = input()
             state = "post"
             vals_requested = 0
 
     elif state == "post":
         print("b: go back\nm: show more comments\na: add comment")
-        post = su.send_request(sock, 4, post_id)
-        comment_data_arr = su.send_request(sock, 5, (post_id, vals_requested, vals_to_req))
+        post = su.send_request(sock, 21, post_id)
+        comment_data_arr = su.send_request(sock, 30, (post_id, vals_requested, vals_to_req))
         vals_requested += len(comment_data_arr)
         print(f"Post content:\n{post['text']}")
         print("Comments on post")  # show initial comments
@@ -154,7 +151,7 @@ while True:
             vals_requested = 0
             continue
         if action == "m":  # show comments
-            comment_data_arr = su.send_request(sock, 5, (post_id, vals_requested, vals_to_req))
+            comment_data_arr = su.send_request(sock, 30, (post_id, vals_requested, vals_to_req))
             if len(comment_data_arr) == 0:
                 print("No more comments")
                 continue
@@ -164,6 +161,6 @@ while True:
         elif action == "a":  # add comment
             print("Enter comment text:")
             text = input()
-            su.send_request(sock, 6, (post_id, text, uname))
+            su.send_request(sock, 2, (forum_id, post_id, text, uname))
             print("Added to database")
             vals_requested = 0
