@@ -42,10 +42,53 @@ def forum(name, desc):
     return forum
 
 
+def post(title, text, user):
+    post = post_template.copy()
+    post["title"] = title
+    post["text"] = text
+    post["user"] = user
+    return post
+
+
+def comment(text, user):
+    comment = comment_template.copy()
+    comment["user"] = user
+    comment["text"] = text
+    return comment
+
+
+def user(uname, pswrd):
+    user = user_template.copy()
+    user["uname"] = uname
+    user["password"] = pswrd
+    return user
+
+
 def add_forum(forum):
     forum["_id"] = forum_db.find_one_and_update({"next_forum_id": {"$exists": True}},
                                                 {"$inc": {"next_forum_id": 1}})["next_forum_id"]
     forum_db.insert_one(forum)
+
+
+def add_post(post, forum_id):
+    post_id = post_db.insert_one(post).inserted_id
+    update_dict = {"$push": {"posts": post_id}}
+    if not forum_db.find_one({"_id": forum_id, "users": post["user"]}):
+        update_dict["$push"]["users"] = post["user"]
+        update_dict["$inc"] = {}
+        update_dict["$inc"]["user_count"] = 1
+    forum_db.update_one({"_id": forum_id}, update_dict)
+
+
+def add_comment(comment, post_id, forum_id):
+    insert_res = cmnt_db.insert_one(comment)
+    post_db.update_one({"_id": objectid.ObjectId(post_id)}, {"$push": {"comments": insert_res.inserted_id}})
+    forum_db.update_one({"_id": forum_id, "users": {"$nin": [comment["user"]]}},
+                        {"$push": {"users": comment["user"]}, "$inc": {"user_count": 1}})
+
+
+def add_user(user):
+    user_db.insert_one(user)
 
 
 def get_forum_data(data, slc=None, text_sort=None, kwrd_sort=None, user_sort=False, forum_id=None):
@@ -74,32 +117,6 @@ def get_forum_data(data, slc=None, text_sort=None, kwrd_sort=None, user_sort=Fal
     return forum_data
 
 
-def remove_keyword(forum_id, kwrd):
-    forum_db.update_one({"_id": forum_id}, {"$pull": {"kwrds": kwrd}})
-
-
-def add_keyword(forum_id, kwrd):
-    forum_db.update_one({"_id": forum_id}, {"$push": {"kwrds": kwrd}})
-
-
-def post(title, text, user):
-    post = post_template.copy()
-    post["title"] = title
-    post["text"] = text
-    post["user"] = user
-    return post
-
-
-def add_post(post, forum_id):
-    post_id = post_db.insert_one(post).inserted_id
-    update_dict = {"$push": {"posts": post_id}}
-    if not forum_db.find_one({"_id": forum_id, "users": post["user"]}):
-        update_dict["$push"]["users"] = post["user"]
-        update_dict["$inc"] = {}
-        update_dict["$inc"]["user_count"] = 1
-    forum_db.update_one({"_id": forum_id}, update_dict)
-
-
 def get_post_data(data, forum_id=None, slc=None, post_id=None):
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
@@ -116,20 +133,6 @@ def get_post_data(data, forum_id=None, slc=None, post_id=None):
         raise Exception("Invalid post data request")
 
 
-def comment(text, user):
-    comment = comment_template.copy()
-    comment["user"] = user
-    comment["text"] = text
-    return comment
-
-
-def add_comment(comment, post_id, forum_id):
-    insert_res = cmnt_db.insert_one(comment)
-    post_db.update_one({"_id": objectid.ObjectId(post_id)}, {"$push": {"comments": insert_res.inserted_id}})
-    forum_db.update_one({"_id": forum_id, "users": {"$nin": [comment["user"]]}},
-                        {"$push": {"users": comment["user"]}, "$inc": {"user_count": 1}})
-
-
 def get_comment_data(data, post_id, slc):
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
@@ -138,11 +141,13 @@ def get_comment_data(data, post_id, slc):
     return list(cmnt_db.find({"_id": {"$in": comment_ids}}, data_dict))[slc[0]:slc[1]]
 
 
-def user(uname, pswrd):
-    user = user_template.copy()
-    user["uname"] = uname
-    user["password"] = pswrd
-    return user
+def get_user_data(data, uname=None):
+    data_dict = {x: 1 for x in data}
+    if "_id" not in data:
+        data_dict["_id"] = 0
+    if uname:
+        return user_db.find_one({"uname": uname}, data_dict)
+    return list(user_db.find({}, data_dict))
 
 
 def user_exists(uname, pswrd=None):
@@ -152,8 +157,24 @@ def user_exists(uname, pswrd=None):
     return bool(user_db.find_one(srch))
 
 
-def add_user(user):
-    user_db.insert_one(user)
+def warn_user(uname, msg):
+    user_db.update_one({"uname": uname}, {"$set": {"warning": msg}})
+
+
+def ban_user(uname, msg, end_date):
+    user_db.update_one({"uname": uname}, {"$set": {"ban": {"message": msg, "end_date": end_date}}})
+
+
+def remove_user_data(uname, field):
+    user_db.update_one({"uname": uname}, {"$unset": {field: ""}})
+
+
+def remove_keyword(forum_id, kwrd):
+    forum_db.update_one({"_id": forum_id}, {"$pull": {"kwrds": kwrd}})
+
+
+def add_keyword(forum_id, kwrd):
+    forum_db.update_one({"_id": forum_id}, {"$push": {"kwrds": kwrd}})
 
 
 # def add_to_blacklist(uname):
