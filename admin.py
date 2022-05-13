@@ -6,7 +6,8 @@ state = "menu"
 while True:
     print("\nEnter action:")
     if state == "menu":
-        print("b: exit\nf: forum view\nu: user view\ns: enter settings\nt: edit time")
+        print("b: exit\nf: forum view\nu: user view")
+        # print(s: enter settings\nt: edit time)
         action = input()
         if action == "b":
             sock.close()
@@ -15,10 +16,10 @@ while True:
             state = "forums"
         elif action == "u":
             state = "users"
-        elif action == "s":
-            state = "settings"
-        elif action == "t":
-            pass
+        # elif action == "s":
+        #     state = "settings"
+        # elif action == "t":
+        #     state = "time"
         else:
             print("Invalid action")
     elif state == "forums":
@@ -67,20 +68,61 @@ while True:
         action = input()
         if action == "b":
             state = "forums"
-        elif action == "rk":
-            print("Enter keyword index to remove")
-            kwrd_i = int(input())
-            if kwrd_i < len(forum_data["kwrds"]):
-                su.send_request(sock, 17, (forum_id, forum_data["kwrds"][kwrd_i]))
-            else:
-                print("Invalid index")
         elif action == "ak":
             print("Enter keyword to add")
             kwrd = input()
             if kwrd not in forum_data["kwrds"]:
-                su.send_request(sock, 18, (forum_id, kwrd))
-
-
+                su.send_request(sock, 15, (forum_id, kwrd))
+        elif action == "rk":
+            print("Enter keyword index to remove")
+            kwrd_i = int(input())
+            if kwrd_i < len(forum_data["kwrds"]):
+                su.send_request(sock, 16, (forum_id, forum_data["kwrds"][kwrd_i]))
+            else:
+                print("Invalid index")
+    elif state == "users":
+        users = su.send_request(sock, 42)
+        print(users)
+        print("b: back\nbu: ban user\nwu: warn user")
+        action = input()
+        if action == "b":
+            state = "menu"
+        elif action == "bu":
+            print("Enter user name:")
+            uname = input()
+            while su.send_request(sock, 41, uname):
+                print("Invalid user name")
+                print("Enter user name:")
+                uname = input()
+            if su.send_request(sock, 46, uname):
+                print("Ban already exists, you will be overriding it."
+                      "\na: abort\nc: continue")
+                action = input()
+                while action != "a" and action != "c":
+                    print("Invalid action, enter again")
+                    action = input()
+                if action == "a":
+                    continue
+            print("Enter ban duration - weeks:")
+            weeks = int(input())
+            print("minutes:")
+            minutes = int(input())
+            print("Enter ban message")
+            msg = input()
+            su.send_request(sock, 44, (uname, msg, weeks, minutes))
+        elif action == "wu":
+            print("Enter user name:")
+            uname = input()
+            while su.send_request(sock, 41, uname):
+                print("Invalid user name")
+                print("Enter user name:")
+                uname = input()
+            if su.send_request(sock, 45, uname):
+                print("user is already warned, and hasn't entered since")
+                continue
+            print("Enter warning message")
+            msg = input()
+            su.send_request(sock, 43, (uname, msg))
 
 # with open("wordlist_10000.txt") as f:
 #     words = f.read().splitlines()

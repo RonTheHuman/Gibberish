@@ -10,7 +10,9 @@ srch_req_id = None
 while True:
     print("\nEnter action")
     if state == "sign_in":
-        print("Sign In: i\nSign up: u\nJoin Anonymously (with ip): a\nb: go back (exit)")
+        print("Sign In: i\nSign up: u")
+        # print("Join Anonymously (with ip): a")
+        print("b: go back (exit)")
         action = input()
         if action == "b":
             sock.close()
@@ -21,7 +23,7 @@ while True:
             print("Enter password")
             pswrd = input().encode()
             pswrd = sha256(pswrd).hexdigest()
-            correct = su.send_request(sock, 7, (uname, pswrd))
+            correct = su.send_request(sock, 40, (uname, pswrd))
             if correct:
                 print("Signed in Successfully")
                 state = "browse"
@@ -32,22 +34,40 @@ while True:
             unique = False
             while not unique:
                 uname = input()
-                unique = su.send_request(sock, 8, uname)
+                unique = su.send_request(sock, 41, uname)
                 if not unique:
+                    sugg = f"{uname}{random.randint(10000000, 1000000000)}"
+                    sugg_unique = su.send_request(sock, 41, sugg)
+                    while not sugg_unique:
+                        sugg = f"{uname}{random.randint(10000000, 100000000)}"
+                        sugg_unique = su.send_request(sock, 41, sugg)
                     print(f"User name already exists, try another one.\n"
-                          f"suggestion: {uname}{random.randint(10000, 100000)}")
+                          f"suggestion: {sugg}")
             print("Enter password")
             pswrd = input().encode()
             pswrd = sha256(pswrd).hexdigest()
             su.send_request(sock, 3, (uname, pswrd))
             print("Signed up Successfully")
             state = "browse"
-        elif action == "a":
-            uname = sock.getsockname()[0]
-            state = "browse"
-            print("Joined successfully")
+        # elif action == "a":
+        #     uname = sock.getsockname()[0]
+        #     state = "browse"
+        #     print("Joined successfully")
 
     elif state == "browse":
+        warning_msg = su.send_request(sock, 45, uname)
+        if warning_msg:
+            print("RECIEVED WARNING:")
+            print(warning_msg, "\n")
+        ban_data = su.send_request(sock, 46, uname)
+        if ban_data:
+            print(f"You are banned from the forum.\nBan message: {ban_data['message']}\n"
+                  f"ban end: {ban_data['end_date']}")
+            print("write e to exit")
+            input()
+            sock.close()
+            exit()
+
         print("b: go back (exit)\na: add forum\n"
               "s[]: pick search type\n\tsl: by latest\n\tsn: search by name\n\tsk: search by keywords\n"
               "m: show more forums\ne: enter forum")

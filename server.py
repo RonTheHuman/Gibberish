@@ -1,11 +1,11 @@
 import socket_util as su
 import dbase_util as du
 import json
+import datetime
 
 
 def reply(req_id, data, ip):
     data = json.loads(data.decode())
-    print("test")
     to_send = ""
 
     if req_id == 0:  # add forum
@@ -34,7 +34,7 @@ def reply(req_id, data, ip):
     elif req_id == 11:  # get forums sorted by text
         if len(data) == 1:
             slc = None
-            search_text = data
+            search_text = data[0]
         else:
             start, amount, search_text = data
             slc = (start, start + amount)
@@ -57,6 +57,12 @@ def reply(req_id, data, ip):
     elif req_id == 14:  # get all forum information, for admin
         forum_id = data
         to_send = du.get_forum_data(("_id", "name", "description", "user_count", "users", "kwrds"), forum_id=forum_id)
+    elif req_id == 15:  # add keyword to forum
+        forum_id, kwrd = data
+        du.add_keyword(forum_id, kwrd)
+    elif req_id == 16:  # remove keyword from forum
+        forum_id, kwrd = data
+        du.remove_keyword(forum_id, kwrd)
 
     elif req_id == 20:  # Get posts: id, title, user
         forum_id, start, amount = data
@@ -75,13 +81,41 @@ def reply(req_id, data, ip):
     elif req_id == 41:  # check if user name is unique
         uname = data
         to_send = not du.user_exists(uname)
-
-    elif req_id == 50:  # remove keyword from forum
-        forum_id, kwrd = data
-        du.remove_keyword(forum_id, kwrd)
-    elif req_id == 51:  # add keyword to forum
-        forum_id, kwrd = data
-        du.add_keyword(forum_id, kwrd)
+    elif req_id == 42:  # get all user data
+        to_send = du.get_user_data(("uname", "warning", "ban"))
+        print(to_send)
+        for user_data in to_send:
+            if user_data.get("ban"):
+                user_data["ban"]["end_date"] = user_data["ban"]["end_date"].strftime('%d/%m/%y, %H:%M:%S') + " UTC"
+    elif req_id == 43:  # warn user
+        uname, msg = data
+        du.warn_user(uname, msg)
+    elif req_id == 44:  # ban user
+        uname, msg, weeks, minutes = data
+        cur_date = datetime.datetime.utcnow()
+        td = datetime.timedelta(weeks=weeks, minutes=minutes)
+        end_date = cur_date + td
+        du.ban_user(uname, msg, end_date)
+    elif req_id == 45:  # return warning message (if exists)
+        uname = data
+        user_data = du.get_user_data(("warning",), uname=uname)
+        print(user_data)
+        if user_data == {}:
+            to_send = None
+        else:
+            du.remove_user_data(uname, "warning")
+            to_send = user_data["warning"]
+    elif req_id == 46:  # return ban message and end time (if exists)
+        uname = data
+        user_data = du.get_user_data(("ban",), uname=uname)
+        if user_data == {}:
+            to_send = None
+        elif user_data["ban"]["end_date"] < datetime.datetime.utcnow():
+            du.remove_user_data(uname, "ban")
+            to_send = None
+        else:
+            to_send = user_data["ban"]
+            to_send["end_date"] = to_send["end_date"].strftime('%d/%m/%y, %H:%M:%S') + " UTC"
 
     else:
         raise Exception("Invalid server request error")
