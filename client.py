@@ -3,7 +3,7 @@ from hashlib import sha256
 import random
 
 
-sock = su.client("192.168.68.137", 12345)
+sock = su.client("172.16.2.92", 12345)
 vals_to_req = 10
 state = "sign_in"
 srch_req_id = None

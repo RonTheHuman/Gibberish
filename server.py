@@ -82,8 +82,7 @@ def reply(req_id, data, ip):
         uname = data
         to_send = not du.user_exists(uname)
     elif req_id == 42:  # get all user data
-        to_send = du.get_user_data(("uname", "warning", "ban"))
-        print(to_send)
+        to_send = du.get_user_data(("uname", "password", "warning", "ban"))
         for user_data in to_send:
             if user_data.get("ban"):
                 user_data["ban"]["end_date"] = user_data["ban"]["end_date"].strftime('%d/%m/%y, %H:%M:%S') + " UTC"

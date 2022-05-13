@@ -1,12 +1,11 @@
 import socket_util as su
 
-sock = su.client("192.168.68.137", 12345)
+sock = su.client("172.16.2.92", 12345)
 
 state = "menu"
 while True:
-    print("\nEnter action:")
     if state == "menu":
-        print("b: exit\nf: forum view\nu: user view")
+        print("b: back (exit)\nf: forum view\nu: user view")
         # print(s: enter settings\nt: edit time)
         action = input()
         if action == "b":
@@ -82,7 +81,10 @@ while True:
                 print("Invalid index")
     elif state == "users":
         users = su.send_request(sock, 42)
-        print(users)
+        for user in users:
+            print(f"User name: {user['uname']}, Hashed password: {user['password']}\n"
+                  f"warning: {user.get('warning')}\n"
+                  f"ban: {user.get('ban')}\n")
         print("b: back\nbu: ban user\nwu: warn user")
         action = input()
         if action == "b":
