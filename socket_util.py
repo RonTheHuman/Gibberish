@@ -40,7 +40,6 @@ def server(port, reply):
         builtins.print(*args, **kwargs)
 
     ip = socket.gethostbyname(socket.gethostname())
-    ip = "172.16.2.92"
     addr = (ip, port)
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind(addr)

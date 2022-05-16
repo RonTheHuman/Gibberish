@@ -2,6 +2,7 @@ import socket_util as su
 import dbase_util as du
 import json
 import datetime
+from dateutil import tz
 
 
 def reply(req_id, data, ip):
@@ -11,6 +12,7 @@ def reply(req_id, data, ip):
     if req_id == 0:  # add forum
         name, desc = data
         forum = du.forum(name, desc)
+        print(forum)
         du.add_forum(forum)
     elif req_id == 1:  # add post
         forum_id, title, text, uname = data
@@ -56,13 +58,21 @@ def reply(req_id, data, ip):
         to_send = du.get_forum_data(("_id", "name", "description", "user_count"), slc=slc, user_sort=True)
     elif req_id == 14:  # get all forum information, for admin
         forum_id = data
-        to_send = du.get_forum_data(("_id", "name", "description", "user_count", "users", "kwrds"), forum_id=forum_id)
+        to_send = du.get_forum_data(("_id", "name", "description", "user_count", "users",
+                                     "desc_kwrds", "post_kwrds", "cmnt_kwrds"), forum_id=forum_id)
     elif req_id == 15:  # add keyword to forum
         forum_id, kwrd = data
         du.add_keyword(forum_id, kwrd)
     elif req_id == 16:  # remove keyword from forum
         forum_id, kwrd = data
         du.remove_keyword(forum_id, kwrd)
+    elif req_id == 17:
+        name = data  # check for similar forums
+        to_send = du.find_similar_forum(name)
+    elif req_id == 18:  # check for duplicate name
+        name = data
+        to_send = not bool(len(du.get_forum_data(("name", ), text_sort=f"^{name}$")))
+        print(to_send)
 
     elif req_id == 20:  # Get posts: id, title, user
         forum_id, start, amount = data
@@ -85,7 +95,10 @@ def reply(req_id, data, ip):
         to_send = du.get_user_data(("uname", "password", "warning", "ban"))
         for user_data in to_send:
             if user_data.get("ban"):
-                user_data["ban"]["end_date"] = user_data["ban"]["end_date"].strftime('%d/%m/%y, %H:%M:%S') + " UTC"
+                dt = user_data["ban"]["end_date"]
+                dt = dt.replace(tzinfo=tz.tzutc())
+                dt = dt.astimezone(tz.tzlocal())
+                user_data["ban"]["end_date"] = dt.strftime('%d/%m/%y, %H:%M:%S')
     elif req_id == 43:  # warn user
         uname, msg = data
         du.warn_user(uname, msg)
@@ -98,8 +111,7 @@ def reply(req_id, data, ip):
     elif req_id == 45:  # return warning message (if exists)
         uname = data
         user_data = du.get_user_data(("warning",), uname=uname)
-        print(user_data)
-        if user_data == {}:
+        if not user_data:
             to_send = None
         else:
             du.remove_user_data(uname, "warning")
@@ -107,14 +119,17 @@ def reply(req_id, data, ip):
     elif req_id == 46:  # return ban message and end time (if exists)
         uname = data
         user_data = du.get_user_data(("ban",), uname=uname)
-        if user_data == {}:
+        if not user_data:
             to_send = None
         elif user_data["ban"]["end_date"] < datetime.datetime.utcnow():
             du.remove_user_data(uname, "ban")
             to_send = None
         else:
             to_send = user_data["ban"]
-            to_send["end_date"] = to_send["end_date"].strftime('%d/%m/%y, %H:%M:%S') + " UTC"
+            dt = to_send["end_date"]
+            dt = dt.replace(tzinfo=tz.tzutc())
+            dt = dt.astimezone(tz.tzlocal())
+            to_send["end_date"] = dt.strftime('%d/%m/%y, %H:%M:%S')
 
     else:
         raise Exception("Invalid server request error")

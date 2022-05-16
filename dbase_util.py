@@ -2,65 +2,35 @@ import pymongo
 from bson import objectid
 import RAKE as rake
 
-
-forum_template = \
-    {"_id": None,
-     "name": None,
-     "description": None,
-     "kwrds": list(),
-     "users": [],
-     "user_count": 0,
-     "posts": list()}
-
-post_template = \
-    {"user": None,
-     "title": None,
-     "text": None,
-     "img_path": None,
-     "comments": list()}
-
-comment_template = \
-    {"user": None,
-     "text": None,
-     "img_path": None}
-
-user_template = \
-    {"uname": None,
-     "password": None,
-     "forums": None}
+secondary_kwrds = 20
+pk_amount = ck_amount = secondary_kwrds  # post keyword amount, comment keyword amount
 
 
 def forum(name, desc):
-    forum = forum_template.copy()
-    forum["name"] = name
-    forum["description"] = desc
-    forum["kwrds"].extend([kwrd[0] for kwrd in rake_obj.run(name)])
-    desc_kwrds = rake_obj.run(desc)
-    for kwrd in desc_kwrds:
-        if kwrd[0] not in forum["kwrds"]:
-            forum["kwrds"].append(kwrd[0])
+    forum = {"_id": None,
+             "name": name,
+             "description": desc,
+             "desc_kwrds": [kwrd[0] for kwrd in rake_obj.run(name + ". " + desc)],
+             "post_kwrds": list(),
+             "cmnt_kwrds": list(),
+             "users": list(),
+             "user_count": 0,
+             "posts": list()}
     return forum
 
 
 def post(title, text, user):
-    post = post_template.copy()
-    post["title"] = title
-    post["text"] = text
-    post["user"] = user
+    post = {"user": user, "title": title, "text": text, "img_path": None, "comments": list()}
     return post
 
 
 def comment(text, user):
-    comment = comment_template.copy()
-    comment["user"] = user
-    comment["text"] = text
+    comment = {"user": user, "text": text, "img_path": None}
     return comment
 
 
 def user(uname, pswrd):
-    user = user_template.copy()
-    user["uname"] = uname
-    user["password"] = pswrd
+    user = {"uname": uname, "password": pswrd, "forums": None}
     return user
 
 
@@ -72,7 +42,10 @@ def add_forum(forum):
 
 def add_post(post, forum_id):
     post_id = post_db.insert_one(post).inserted_id
-    update_dict = {"$push": {"posts": post_id}}
+    rake_data = post["title"] + ". " + post["text"]
+    post_kwrds = rake_obj.run(rake_data)[:5]
+    post_kwrds = [kwrd[0] for kwrd in post_kwrds]
+    update_dict = {"$push": {"posts": post_id, "post_kwrds": {"$each": post_kwrds, "$slice": -pk_amount}}}
     if not forum_db.find_one({"_id": forum_id, "users": post["user"]}):
         update_dict["$push"]["users"] = post["user"]
         update_dict["$inc"] = {}
@@ -82,9 +55,16 @@ def add_post(post, forum_id):
 
 def add_comment(comment, post_id, forum_id):
     insert_res = cmnt_db.insert_one(comment)
+    rake_data = comment["text"]
+    cmnt_kwrds = rake_obj.run(rake_data)[:5]
+    cmnt_kwrds = [kwrd[0] for kwrd in cmnt_kwrds]
+    update_dict = {"$push": {"cmnt_kwrds": {"$each": cmnt_kwrds, "$slice": -ck_amount}}}
     post_db.update_one({"_id": objectid.ObjectId(post_id)}, {"$push": {"comments": insert_res.inserted_id}})
-    forum_db.update_one({"_id": forum_id, "users": {"$nin": [comment["user"]]}},
-                        {"$push": {"users": comment["user"]}, "$inc": {"user_count": 1}})
+    if not forum_db.find_one({"_id": forum_id, "users": comment["user"]}):
+        update_dict["$push"]["users"] = comment["user"]
+        update_dict["$inc"] = {}
+        update_dict["$inc"]["user_count"] = 1
+    forum_db.update_one({"_id": forum_id}, update_dict)
 
 
 def add_user(user):
@@ -95,7 +75,7 @@ def get_forum_data(data, slc=None, text_sort=None, kwrd_sort=None, user_sort=Fal
     data_dict = {x: 1 for x in data}
     if "_id" not in data:
         data_dict["_id"] = 0
-    if forum_id:
+    if forum_id is not None:
         return forum_db.find_one({"_id": forum_id}, data_dict)
     find_dict = {"next_forum_id": {"$exists": False}}
     if text_sort:
@@ -147,7 +127,7 @@ def get_user_data(data, uname=None):
         data_dict["_id"] = 0
     if uname:
         return user_db.find_one({"uname": uname}, data_dict)
-    return list(user_db.find({}, data_dict))
+    return list(user_db.find({}, data_dict).sort("uname", pymongo.ASCENDING))
 
 
 def user_exists(uname, pswrd=None):
@@ -175,6 +155,19 @@ def remove_keyword(forum_id, kwrd):
 
 def add_keyword(forum_id, kwrd):
     forum_db.update_one({"_id": forum_id}, {"$push": {"kwrds": kwrd}})
+
+
+def find_similar_forum(name):
+    kwrd_search = list(forum_db.find({"$text": {"$search": name}},
+                                     {"_id": 0, "name": 1, "description": 1, "score": {"$meta": "textScore"}}
+                                     ).sort([("score", pymongo.DESCENDING)]))
+    if not kwrd_search:
+        return None
+    if kwrd_search[0]["score"] >= 4:
+        del kwrd_search[0]["score"]
+        return kwrd_search[0]
+    else:
+        return None
 
 
 # def add_to_blacklist(uname):

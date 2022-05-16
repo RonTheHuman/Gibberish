@@ -1,6 +1,6 @@
 import socket_util as su
 
-sock = su.client("172.16.2.92", 12345)
+sock = su.client("192.168.68.137", 12345)
 
 state = "menu"
 while True:
@@ -26,9 +26,9 @@ while True:
               "\ne: enter forum")
         action = input()
         if action == "b":
-            state = "settings"
+            state = "menu"
         elif action == "sl":
-            print("All forms:")
+            print("All forums:")
             forum_data_arr = su.send_request(sock, 10)
             for forum_data in forum_data_arr:
                 print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}, "
@@ -36,7 +36,7 @@ while True:
         elif action == "st":
             print("Enter text")
             text = input()
-            print("All forms:")
+            print("All forums:")
             forum_data_arr = su.send_request(sock, 11, (text, ))
             for forum_data in forum_data_arr:
                 print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}, "
@@ -44,13 +44,13 @@ while True:
         elif action == "sk":
             print("Enter keyword")
             kwrd = input()
-            print("All forms:")
+            print("All forums:")
             forum_data_arr = su.send_request(sock, 12, (kwrd, ))
             for forum_data in forum_data_arr:
                 print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}, "
                       f"{forum_data['user_count']} users")
         elif action == "su":
-            print("All forms:")
+            print("All forums:")
             forum_data_arr = su.send_request(sock, 13)
             for forum_data in forum_data_arr:
                 print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}, "
@@ -60,10 +60,13 @@ while True:
             forum_id = int(input())
             state = "forum"
     elif state == "forum":
-        print("b: back\nrk: remove keyword\nak: add keyword")
+        print("b: back\nrk: remove keyword\nak: add keyword\nr: refresh")
         forum_data = su.send_request(sock, 14, forum_id)
-        print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}\n "
-              f"{forum_data['user_count']} users: {forum_data['users']}\nkeywords: {forum_data['kwrds']}")
+        print(f"id: {forum_data['_id']}| Name: {forum_data['name']}, description: {forum_data['description']}\n"
+              f"{forum_data['user_count']} users: {forum_data['users']}\nkeywords:\n"
+              f"\tfrom description: {forum_data['desc_kwrds']}\n"
+              f"\tfrom posts: {forum_data['post_kwrds']}\n"
+              f"\tfrom comments: {forum_data['cmnt_kwrds']}")
         action = input()
         if action == "b":
             state = "forums"
@@ -79,13 +82,15 @@ while True:
                 su.send_request(sock, 16, (forum_id, forum_data["kwrds"][kwrd_i]))
             else:
                 print("Invalid index")
+        elif action == "r":
+            continue
     elif state == "users":
         users = su.send_request(sock, 42)
         for user in users:
             print(f"User name: {user['uname']}, Hashed password: {user['password']}\n"
                   f"warning: {user.get('warning')}\n"
                   f"ban: {user.get('ban')}\n")
-        print("b: back\nbu: ban user\nwu: warn user")
+        print("b: back\nbu: ban user\nwu: warn user\nr: refresh")
         action = input()
         if action == "b":
             state = "menu"
@@ -125,6 +130,8 @@ while True:
             print("Enter warning message")
             msg = input()
             su.send_request(sock, 43, (uname, msg))
+        elif action == "r":
+            pass
 
 # with open("wordlist_10000.txt") as f:
 #     words = f.read().splitlines()

@@ -3,15 +3,28 @@ from hashlib import sha256
 import random
 
 
-sock = su.client("172.16.2.92", 12345)
+sock = su.client("192.168.68.137", 12345)
 vals_to_req = 10
 state = "sign_in"
 srch_req_id = None
 while True:
+    if state != "sign_in":
+        warning_msg = su.send_request(sock, 45, uname)
+        if warning_msg:
+            print("RECIEVED WARNING:")
+            print(warning_msg, "\n")
+        ban_data = su.send_request(sock, 46, uname)
+        if ban_data:
+            print(f"You are banned from the forum.\nBan message: {ban_data['message']}\n"
+                  f"ban end: {ban_data['end_date']}")
+            print("enter any key to sign out")
+            input()
+            state = "sign_in"
+            continue
     print("\nEnter action")
     if state == "sign_in":
         print("Sign In: i\nSign up: u")
-        # print("Join Anonymously (with ip): a")
+        print("Join Anonymously (with ip): a")
         print("b: go back (exit)")
         action = input()
         if action == "b":
@@ -49,27 +62,18 @@ while True:
             su.send_request(sock, 3, (uname, pswrd))
             print("Signed up Successfully")
             state = "browse"
-        # elif action == "a":
-        #     uname = sock.getsockname()[0]
-        #     state = "browse"
-        #     print("Joined successfully")
+        elif action == "a":
+            uname = sock.getsockname()[0]
+            first_time_anonymous = su.send_request(sock, 41, uname)
+            if first_time_anonymous:
+                su.send_request(sock, 3, (uname, None))
+            state = "browse"
+            print("Joined successfully")
 
     elif state == "browse":
-        warning_msg = su.send_request(sock, 45, uname)
-        if warning_msg:
-            print("RECIEVED WARNING:")
-            print(warning_msg, "\n")
-        ban_data = su.send_request(sock, 46, uname)
-        if ban_data:
-            print(f"You are banned from the forum.\nBan message: {ban_data['message']}\n"
-                  f"ban end: {ban_data['end_date']}")
-            print("write e to exit")
-            input()
-            sock.close()
-            exit()
-
         print("b: go back (exit)\na: add forum\n"
-              "s[]: pick search type\n\tsl: by latest\n\tsn: search by name\n\tsk: search by keywords\n"
+              "s[]: pick search type\n\t"
+              "sl: by latest\n\tsn: search by name\n\tsk: search by keywords\n"
               "m: show more forums\ne: enter forum")
         action = input()
         if action == "b":
@@ -94,6 +98,21 @@ while True:
         elif action == "a":  # add forum
             print("Enter forum name:")
             name = input()
+            unique_f = su.send_request(sock, 18, name)
+            if not unique_f:
+                print("Forum name already taken")
+                continue
+            similar_forum = su.send_request(sock, 17, name)
+            if similar_forum is not None:
+                print("Our algorithm detected a similar forum: ")
+                print(f"Name: {similar_forum['name']}\nDescription: {similar_forum['description']}")
+                print("Are you sure you want to create this forum?\ny: yes\nn: no")
+                action = input()
+                while action != "y" and action != "n":
+                    print("Invalid input, enter again")
+                    action = input()
+                if action == "n":
+                    continue
             print("Enter forum description:")
             desc = input()
             su.send_request(sock, 0, (name, desc))
