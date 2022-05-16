@@ -71,7 +71,7 @@ while True:
             print("Joined successfully")
 
     elif state == "browse":
-        print("b: go back (exit)\na: add forum\n"
+        print("b: go back\na: add forum\n"
               "s[]: pick search type\n\t"
               "sl: by latest\n\tsn: search by name\n\tsk: search by keywords\n"
               "m: show more forums\ne: enter forum")

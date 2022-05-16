@@ -2,13 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="03053ad1-2c20-4651-aa69-9dfc8235dc98" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/admin.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/client.py" beforeDir="false" afterPath="$PROJECT_DIR$/client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dbase_util.py" beforeDir="false" afterPath="$PROJECT_DIR$/dbase_util.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server.py" beforeDir="false" afterPath="$PROJECT_DIR$/server.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/socket_util.py" beforeDir="false" afterPath="$PROJECT_DIR$/socket_util.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tkclient.py" beforeDir="false" afterPath="$PROJECT_DIR$/tkclient.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,7 +33,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$/tktest.py" />
     <property name="settings.editor.selected.configurable" value="Errors" />
   </component>
-  <component name="RunManager" selected="Python.tktest">
+  <component name="RunManager" selected="Python.tkclient">
     <configuration name="admin" type="PythonConfigurationType" factoryName="Python">
       <module name="forum" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -122,7 +118,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="tktest" type="PythonConfigurationType" factoryName="Python">
+    <configuration name="tkclient" type="PythonConfigurationType" factoryName="Python">
       <module name="forum" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -134,7 +130,7 @@
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="C:\Users\USER\Desktop\Coding\School Programming\Python\forum\tkclient.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tkclient.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -145,7 +141,7 @@
     </configuration>
     <list>
       <item itemvalue="Python.server" />
-      <item itemvalue="Python.tktest" />
+      <item itemvalue="Python.tkclient" />
       <item itemvalue="Python.client" />
       <item itemvalue="Python.admin" />
       <item itemvalue="Python.mongotest" />
