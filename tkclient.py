@@ -55,8 +55,21 @@ def back(main_frame):
 
 
 def tk_exit(root):
+    sock.close()
     root.quit()
     exit()
+
+
+def change_page(list, list_type, dir, next_button, prev_button):
+    global last_srch_type
+    global starting_val_i
+    global vals_to_req
+    global last_query
+    starting_val_i += vals_to_req * dir
+    if list_type == "forum":
+        show_forums(last_srch_type, list, next_button, prev_button, last_query)
+    else:
+        raise Exception("Invalid list type in page change function")
 
 
 def show_forums(srch_type, forum_list, next_button, prev_button, query=None):
@@ -92,11 +105,18 @@ def show_forums(srch_type, forum_list, next_button, prev_button, query=None):
             grid(row=0, column=0, padx=5, sticky="NSEW")
         ttk.Label(forum, text=f"Name: {forum_data['name']}"). \
             grid(row=0, column=1, padx=5, sticky="NSEW")
-        ttk.Button(forum, text="Join", command=lambda: forum_screen(main_frame)). \
+        _id = forum_data['_id']
+        name = forum_data['name']
+        desc = forum_data['description']
+        bt = ttk.Button(forum, text="Join",
+                   command=lambda _id=_id, name=name, desc=desc: forum_screen(main_frame, _id, name, desc)). \
             grid(row=0, column=2, padx=5, sticky="NSEW")
-        ttk.Label(forum, text=f"Descpription: {forum_data['description']}"). \
+        desc = forum_data["description"]
+        if len(desc) > 70:
+            desc = desc[:70]
+            desc = desc[:desc.rfind(" ")] + " ..."
+        ttk.Label(forum, text=f"Description: {desc}"). \
             grid(row=1, column=0, columnspan=3, pady=5, sticky="NSEW")
-
     if starting_val_i == 0:
         prev_button["state"] = tk.DISABLED
     else:
@@ -107,22 +127,21 @@ def show_forums(srch_type, forum_list, next_button, prev_button, query=None):
         next_button["state"] = tk.ACTIVE
 
 
-def next_page(forum_list, next_button, prev_button):
-    global last_srch_type
+def show_posts(post_list, next_button, prev_button, forum_id):
     global starting_val_i
     global vals_to_req
-    global last_query
-    starting_val_i += vals_to_req
-    show_forums(last_srch_type, forum_list, next_button, prev_button, last_query)
-
-
-def prev_page(forum_list, next_button, prev_button):
-    global last_srch_type
-    global starting_val_i
-    global vals_to_req
-    global last_query
-    starting_val_i -= vals_to_req
-    show_forums(last_srch_type, forum_list, next_button, prev_button, last_query)
+    ttk.Label(post_list, text="No posts yet!").grid()
+    post_data_arr = su.send_request(sock, 20, (forum_id, starting_val_i, vals_to_req))
+    for post_data in post_data_arr:
+        post = ttk.Frame(post_list, relief="ridge", padding=10)
+        post.grid(pady=5, sticky="NEW")
+        stretch_config(post, (5, 1), ())
+        ttk.Label(post, text=f"Title: {post_data['title']}"). \
+            grid(row=0, column=0, pady=2, sticky="NSEW")
+        ttk.Label(post, text=f"By user: {post_data['user']}"). \
+            grid(row=1, column=0, pady=2, sticky="NSEW")
+        ttk.Button(post, text="Enter", command=lambda: post_screen(main_frame, forum_id, post_data["_id"])). \
+            grid(row=0, column=1, padx=5, sticky="NSEW")
 
 
 def sign_in_screen(main_frame):
@@ -147,26 +166,31 @@ def sign_in_screen(main_frame):
 
 def browse_screen(main_frame):
     global state
+    global starting_val_i
+    starting_val_i = 0
     state = "browse"
     navigation_menu.entryconfigure("Back", state=tk.ACTIVE)
     destroy_children(main_frame)
     stretch_config(main_frame, (1, 1), (0, ))
 
     search_frame = ttk.Frame(main_frame)
-    search_frame.grid(sticky="NEW", columnspan=2)
+    search_frame.grid(sticky="NEW", row=0, columnspan=2, pady=10)
     stretch_config(search_frame, (1, )*6, (1, )*2)
 
+    ttk.Button(main_frame, text="Create forum"). \
+        grid(row=1, columnspan=2, pady=20)
+
     forum_list = ttk.Labelframe(main_frame, text="Forums", padding=10, relief="solid", borderwidth=10)
-    forum_list.grid(sticky="NEW", padx=20, pady=10, columnspan=2)
+    forum_list.grid(sticky="NEW", padx=20, row=2, columnspan=2)
     stretch_config(forum_list, (1, ), (1, )*10)
 
     query_str = tk.StringVar(search_frame, value=None)
     next_button = ttk.Button(main_frame, text="Next page", state=tk.DISABLED,
-                             command=lambda: next_page(forum_list, next_button, prev_button))
-    next_button.grid(row=2, column=1, sticky="w", padx=10)
+                             command=lambda: change_page(forum_list, "forum", 1, next_button, prev_button))
+    next_button.grid(row=3, column=1, sticky="w", padx=10, pady=10)
     prev_button = ttk.Button(main_frame, text="Previous page", state=tk.DISABLED,
-                             command=lambda: prev_page(forum_list, next_button, prev_button))
-    prev_button.grid(row=2, column=0, sticky="e", padx=10)
+                             command=lambda: change_page(forum_list, "forum", -1, next_button, prev_button))
+    prev_button.grid(row=3, column=0, sticky="e", padx=10, pady=10)
 
     ttk.Button(search_frame, text="Show Latest",
                command=lambda: show_forums("latest", forum_list, next_button, prev_button)). \
@@ -197,46 +221,50 @@ def browse_screen(main_frame):
         grid(row=1, column=6, columnspan=2, sticky="EW")
 
     ttk.Label(forum_list, text="No forums searched for yet!").grid(row=0)
-    change_min_window_size(700, 1000)
+    change_min_window_size(700, 1100)
 
 
-def forum_screen(main_frame):
+def forum_screen(main_frame, forum_id, forum_name, forum_desc):
     global state
+    global starting_val_i
+    starting_val_i = 0
     state = "forum"
     destroy_children(main_frame)
-    stretch_config(main_frame, (1, ), (0, ))
+    stretch_config(main_frame, (1, 1), (0, ))
 
     top_frame = ttk.Frame(main_frame)
-    top_frame.grid(sticky="NEW", padx=20, pady=10)
-    stretch_config(top_frame, (1, )*3, (1, )*2)
-    ttk.Label(top_frame, wraplength=500, text="In forum: Programming"). \
+    top_frame.grid(sticky="NEW", padx=20, pady=10, columnspan=2)
+    stretch_config(top_frame, (4, 0, 1), (1, )*2)
+
+    post_list = ttk.Labelframe(main_frame, text="Posts", padding=10, borderwidth=10)
+    post_list.grid(row=1, column=0, pady=10, sticky="NEW", columnspan=2)
+    stretch_config(post_list, (1,), (1,) * 10)
+
+    next_button = ttk.Button(main_frame, text="Next page", state=tk.DISABLED,
+                             command=lambda: change_page(post_list, "post", 1, next_button, prev_button))
+    next_button.grid(row=2, column=1, sticky="w", padx=10)
+    prev_button = ttk.Button(main_frame, text="Previous page", state=tk.DISABLED,
+                             command=lambda: change_page(post_list, "post", -1, next_button, prev_button))
+    prev_button.grid(row=2, column=0, sticky="e", padx=10)
+
+    ttk.Label(top_frame, wraplength=500, text=f"In forum: {forum_name}"). \
         grid(row=0, column=0, sticky="w")
-    ttk.Label(top_frame, wraplength=300, text="Descrpition: For general questions about programming in all programming languages."). \
+    ttk.Label(top_frame, wraplength=500, text=f"Descrpition: {forum_desc*5}"). \
         grid(row=1, column=0, sticky="w")
     ttk.Separator(top_frame, orient=tk.VERTICAL). \
         grid(row=0, column=1, rowspan=2, sticky="NS", padx=10)
     ttk.Button(top_frame, text="Create post"). \
-        grid(row=0, column=2, rowspan=2, sticky="NSEW")
+        grid(row=0, column=2, rowspan=2, sticky="EW")
 
-    post_list = ttk.Labelframe(main_frame, text="Posts", padding=10, borderwidth=10)
-    post_list.grid(row=1, column=0, pady=10, sticky="NEW")
-    stretch_config(post_list, (1, ), (1, )*10)
-    ttk.Label(post_list, text="No posts yet!").grid()
-    for x in range(3):
-        post = ttk.Frame(post_list, relief="ridge", padding=10)
-        post.grid(pady=5, sticky="NEW")
-        stretch_config(post, (5, 1), ())
-        ttk.Label(post, text="Title: Any tips for a beginner programmer?"). \
-            grid(row=0, column=0, pady=2, sticky="NSEW")
-        ttk.Label(post, text="By user: RonTheHuman"). \
-            grid(row=1, column=0, pady=2, sticky="NSEW")
-        ttk.Button(post, text="Enter", command=lambda: post_screen(main_frame)). \
-            grid(row=0, column=1, padx=5, sticky="NSEW")
+    show_posts(post_list, next_button, prev_button, forum_id)
+
     change_min_window_size(700, 1000)
 
 
-def post_screen(main_frame):
+def post_screen(main_frame, forum_id, post_id):
     global state
+    global starting_val_i
+    starting_val_i = 0
     state = "post"
     destroy_children(main_frame)
     stretch_config(main_frame, (1, ), (0, ))
